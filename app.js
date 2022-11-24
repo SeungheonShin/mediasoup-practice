@@ -64,19 +64,28 @@ const createWorker = async () => {
 
 peers.on("connection", async (socket) => {
   console.log(socket.id);
-  socket.emit("connection-success", { socketId: socket.id });
+
+  socket.emit("connection-success", {
+    socketId: socket.id,
+    existsProducer: producer ? true : false,
+  });
   socket.on("disconnect", () => {
     console.log("peer disconnected:", socket.id);
   });
 
-  router = await worker.createRouter({ mediaCodecs });
+  socket.on("createRoom", async (cb) => {
+    if (router === undefined) {
+      router = await worker.createRouter({ mediaCodecs });
+      console.log("router created:", router.id);
+    }
 
-  socket.on("getRtpCapabilities", (cb) => {
-    const rtpCapabilities = router.rtpCapabilities;
-    console.log("getRtpCapabilities:", rtpCapabilities);
-
-    cb({ rtpCapabilities });
+    getRtpCapabilities(cb);
   });
+
+  const getRtpCapabilities = (cb) => {
+    const rtpCapabilities = router.rtpCapabilities;
+    cb({ rtpCapabilities });
+  };
 
   socket.on("createWebRtcTransport", async ({ sender }, cb) => {
     if (sender) {
